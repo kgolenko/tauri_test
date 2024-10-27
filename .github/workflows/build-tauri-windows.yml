@@ -1,0 +1,64 @@
+name: Build Tauri for Windows
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node-version: [16]   # Убедитесь, что версия Node совпадает с используемой в проекте
+        rust-version: [1.71] # Версия Rust, которую вы используете
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          override: true
+
+      - name: Cache Rust Cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry
+
+      - name: Cache Rust Cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target
+          restore-keys: |
+            ${{ runner.os }}-cargo-target
+
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli
+
+      - name: Build Tauri Application
+        run: npm run tauri build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: tauri-windows-build
+          path: src-tauri/target/release/bundle
